@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRSprint & Digital POS Review Toko</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- QRCode JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Html5-Qrcode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print styles */
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="h-full font-sans text-slate-800 flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Navigation Sidebar -->
+    <aside class="w-full md:w-20 bg-slate-900 text-white flex md:flex-col justify-between items-center py-3 px-4 md:py-6 z-20 shrink-0 no-print">
+        <div class="flex items-center gap-2 md:flex-col md:gap-4">
+            <div class="w-10 h-10 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-lg">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <span class="md:hidden font-bold text-sm tracking-wide">QRSprint</span>
+        </div>
+
+        <!-- Navigation Items -->
+        <nav class="flex md:flex-col gap-1 md:gap-3">
+            <button onclick="switchTab('batch')" id="nav-batch" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1 bg-slate-800 text-sky-400">
+                <i class="fa-solid fa-print text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Batch</span>
+            </button>
+            <button onclick="switchTab('generator')" id="nav-generator" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1">
+                <i class="fa-solid fa-wand-magic-sparkles text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Custom</span>
+            </button>
+            <button onclick="switchTab('scanner')" id="nav-scanner" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1">
+                <i class="fa-solid fa-camera text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Scan</span>
+            </button>
+            <button onclick="switchTab('activator')" id="nav-activator" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1">
+                <i class="fa-solid fa-star text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Aktivasi</span>
+            </button>
+            <button onclick="switchTab('pos')" id="nav-pos" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1">
+                <i class="fa-solid fa-cash-register text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Kasir</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="nav-btn w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs gap-1">
+                <i class="fa-solid fa-clock-rotate-left text-base md:text-lg"></i>
+                <span class="text-[9px] hidden md:block">Riwayat</span>
+            </button>
+        </nav>
+
+        <button onclick="openSettingsModal()" title="Pengaturan Toko & QR" class="w-9 h-9 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-gear text-sm"></i>
+        </button>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+
+        <!-- Header Bar -->
+        <header class="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center shrink-0 no-print">
+            <div class="flex items-center gap-3">
+                <h1 id="page-title" class="text-base sm:text-lg font-bold text-slate-800">QRSprint Batch Print Generator</h1>
+                <span class="text-[11px] px-2.5 py-0.5 bg-sky-100 text-sky-700 font-medium rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-bolt text-sky-500"></i> Active
+                </span>
+            </div>
+            <div class="text-right">
+                <p id="clock-time" class="text-xs sm:text-sm font-bold text-slate-700">00:00:00</p>
+                <p id="clock-date" class="text-[10px] text-slate-400">1 Jan 2026</p>
+            </div>
+        </header>
+
+        <!-- TAB 1: BATCH GENERATOR (QRSprint) -->
+        <div id="section-batch" class="tab-section flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Prefix / Text Awal</label>
+                    <input type="text" id="batch-prefix" value="MEJA-" placeholder="e.g. MEJA-, STK-" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Mulai & Selesai</label>
+                    <div class="flex items-center gap-2">
+                        <input type="number" id="batch-start" value="1" min="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                        <span class="text-xs text-slate-400">s/d</span>
+                        <input type="number" id="batch-end" value="12" min="1" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">URL Landasan/Redirect (Opsional)</label>
+                    <input type="url" id="batch-base-url" placeholder="https://toko.com/scan?id=" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button onclick="generateBatchQR()" class="flex-1 py-2 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> Generate Sprint
+                    </button>
+                    <button onclick="window.print()" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow transition" title="Cetak Semua">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Printable Grid Area -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm print-area">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100 no-print">
+                    <h3 class="font-bold text-sm text-slate-800">Hasil Generator Batch QR Code</h3>
+                    <span id="batch-count-label" class="text-xs text-slate-500">12 QR Dihasilkan</span>
+                </div>
+                <div id="batch-qr-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <!-- Dynamic QR Grid items -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CUSTOM QR GENERATOR -->
+        <div id="section-generator" class="tab-section hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Inputs & Styling Panel -->
+                <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                    <!-- Data Type Selection -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">Tipe Data QR Code</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setGenType('url')" id="gt-url" class="gen-type-btn px-3 py-1.5 rounded-xl border text-xs font-semibold bg-sky-50 border-sky-600 text-sky-700">URL / Link</button>
+                            <button onclick="setGenType('text')" id="gt-text" class="gen-type-btn px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">Teks Bebas</button>
+                            <button onclick="setGenType('wifi')" id="gt-wifi" class="gen-type-btn px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">Wi-Fi</button>
+                            <button onclick="setGenType('wa')" id="gt-wa" class="gen-type-btn px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">WhatsApp</button>
+                            <button onclick="setGenType('vcard')" id="gt-vcard" class="gen-type-btn px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">vCard Kontak</button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Input Fields -->
+                    <div id="gen-fields-container" class="space-y-3 pt-2">
+                        <!-- Default URL Field -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">URL Target</label>
+                            <input type="url" id="gen-input-url" oninput="renderCustomQR()" value="https://google.com" placeholder="https://example.com" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Style Controls -->
+                    <div class="pt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Warna QR (Foreground)</label>
+                            <input type="color" id="gen-color-fg" value="#000000" onchange="renderCustomQR()" class="w-full h-9 p-0.5 rounded-xl cursor-pointer bg-white border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Warna Latar (Background)</label>
+                            <input type="color" id="gen-color-bg" value="#ffffff" onchange="renderCustomQR()" class="w-full h-9 p-0.5 rounded-xl cursor-pointer bg-white border border-slate-300">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Ukuran Res (px)</label>
+                            <select id="gen-size" onchange="renderCustomQR()" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs outline-none">
+                                <option value="200">200 x 200</option>
+                                <option value="300" selected>300 x 300</option>
+                                <option value="500">500 x 500</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview Panel -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Preview Result</h3>
+                    <div id="custom-qr-preview" class="p-3 bg-white border border-slate-200 rounded-2xl shadow-inner flex items-center justify-center min-h-[220px]"></div>
+                    <div class="flex gap-2 w-full">
+                        <button onclick="downloadCustomQR()" class="flex-1 py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-download"></i> Download PNG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: QR SCANNER -->
+        <div id="section-scanner" class="tab-section hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Live Camera Scanner Box -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center space-y-4">
+                    <div class="w-full flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-slate-800">Kamera Scanner</h3>
+                        <div class="flex gap-2">
+                            <button onclick="startCameraScanner()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition">
+                                <i class="fa-solid fa-power-off"></i> Mulai Kamera
+                            </button>
+                            <button onclick="stopCameraScanner()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-xl transition">
+                                <i class="fa-solid fa-stop"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="reader" class="w-full max-w-sm aspect-square bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-800"></div>
+
+                    <!-- File Upload Option -->
+                    <div class="w-full pt-3 border-t border-slate-100 text-center">
+                        <p class="text-xs text-slate-500 mb-2">Atau scan dari file gambar / galeri:</p>
+                        <input type="file" id="qr-input-file" accept="image/*" onchange="scanImageFile(event)" class="hidden">
+                        <label for="qr-input-file" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer inline-flex items-center gap-2 transition">
+                            <i class="fa-solid fa-image"></i> Pilih Gambar dari File
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Scan Output Display -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-800 mb-3">Hasil Pemindaian Terakhir</h3>
+                        <div id="scan-result-box" class="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2 min-h-[140px] flex flex-col justify-center items-center text-slate-400">
+                            <i class="fa-solid fa-qrcode text-3xl text-slate-300"></i>
+                            <p>Belum ada QR Code yang dipindai</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="copyScanResult()" id="btn-copy-scan" disabled class="flex-1 py-2 px-3 bg-slate-800 disabled:bg-slate-300 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-copy"></i> Salin Hasil
+                        </button>
+                        <a id="btn-open-scan" href="#" target="_blank" class="hidden flex-1 py-2 px-3 bg-sky-600 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka URL
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: GOOGLE REVIEW ACTIVATOR -->
+        <div id="section-activator" class="tab-section hidden flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+            <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                <div class="text-center space-y-1">
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl mx-auto mb-2">
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                    <h2 class="text-base font-bold text-slate-800">Aktivator QR Code Google Review Toko</h2>
+                    <p class="text-xs text-slate-500">Aktivasi stiker/meja QR kosong agar langsung terhubung ke link Google Review toko Anda.</p>
+                </div>
+
+                <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Target URL Google Review Toko</label>
+                        <input type="url" id="act-google-url" placeholder="https://g.page/r/example/review" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Kode Unik Stiker / Meja (ID QR)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="act-qr-id" placeholder="MEJA-001" class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                            <button onclick="switchTab('scanner')" class="px-3 py-2 bg-slate-800 text-white text-xs font-semibold rounded-xl shrink-0" title="Scan dari Kamera">
+                                <i class="fa-solid fa-camera"></i> Scan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="activateReviewQR()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Aktivasi QR Sekarang
+                </button>
+
+                <div id="activator-preview-box" class="hidden text-center pt-3 border-t border-slate-100 space-y-3">
+                    <span class="text-xs font-bold text-emerald-600 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-circle-check"></i> QR Berhasil Diaktifkan!
+                    </span>
+                    <div id="act-qr-result" class="p-2 bg-white border border-slate-200 rounded-xl w-fit mx-auto shadow-sm"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: POS CASH REGISTER -->
+        <div id="section-pos" class="tab-section hidden flex-1 flex flex-col lg:flex-row h-full overflow-hidden">
+            <!-- Left Side: Catalog -->
+            <div class="flex-1 flex flex-col h-full overflow-hidden p-4 sm:p-6 space-y-4">
+                <div class="flex justify-between items-center gap-3">
+                    <input type="text" id="pos-search" oninput="renderPosCatalog()" placeholder="Cari nama produk..." class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none">
+                </div>
+                <div class="flex-1 overflow-y-auto pr-1">
+                    <div id="pos-catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <!-- Dynamic Catalog Products -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Interactive Cart -->
+            <div class="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col h-2/5 lg:h-full shrink-0">
+                <div class="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                    <h3 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-cart-shopping text-sky-600"></i> Keranjang Kasir
+                    </h3>
+                    <button onclick="clearPosCart()" class="text-[11px] text-rose-500 font-medium">Kosongkan</button>
+                </div>
+                <div id="pos-cart-container" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+                <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-2">
+                    <div class="space-y-1 text-xs text-slate-600">
+                        <div class="flex justify-between"><span>Subtotal</span><span id="pos-subtotal" class="font-semibold text-slate-800">Rp 0</span></div>
+                        <div class="flex justify-between font-bold text-sm text-slate-900 pt-1 border-t border-slate-200"><span>Total</span><span id="pos-total" class="text-sky-600">Rp 0</span></div>
+                    </div>
+                    <button onclick="openPosCheckoutModal()" id="btn-pos-checkout" disabled class="w-full py-2.5 bg-sky-600 disabled:bg-slate-300 text-white font-bold rounded-xl text-xs transition">
+                        Proses Bayar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: HISTORY -->
+        <div id="section-history" class="tab-section hidden flex-1 flex flex-col h-full overflow-hidden p-4 sm:p-6 space-y-4">
+            <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xs font-bold text-slate-800">Riwayat Scan & Aktivasi QR</h2>
+                    <p class="text-[10px] text-slate-500">Log aktivitas penggunaan QR Code.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="exportHistoryCSV()" class="px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-xl">Export CSV</button>
+                    <button onclick="clearHistory()" class="px-3 py-1.5 bg-rose-100 text-rose-700 text-xs font-semibold rounded-xl">Hapus Log</button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase">
+                            <tr>
+                                <th class="py-3 px-4">Waktu</th>
+                                <th class="py-3 px-4">Tipe</th>
+                                <th class="py-3 px-4">Konten / URL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL POS CHECKOUT -->
+    <div id="modal-pos-checkout" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white max-w-sm w-full rounded-2xl shadow-2xl p-5 space-y-4">
+            <h3 class="font-bold text-slate-800 text-sm">Pembayaran Kasir</h3>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-slate-500">Total Tagihan:</span><strong id="pos-pay-total" class="text-sky-600">Rp 0</strong></div>
+                <div>
+                    <label class="block text-slate-700 font-semibold mb-1">Uang Diterima</label>
+                    <input type="number" id="pos-cash-input" oninput="calcPosChange()" placeholder="0" class="w-full px-3 py-2 border rounded-xl text-sm font-bold outline-none">
+                </div>
+                <div class="flex justify-between pt-2 border-t"><span class="font-semibold text-slate-700">Kembalian:</span><strong id="pos-change-display" class="text-emerald-600">Rp 0</strong></div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closePosCheckoutModal()" class="px-3 py-2 text-xs text-slate-500">Batal</button>
+                <button onclick="submitPosTransaction()" class="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow">Cetak Struk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RECEIPT -->
+    <div id="modal-receipt" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white max-w-sm w-full rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] no-print">
+            <div class="p-3 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-xs text-slate-800">Struk Belanja</h3>
+                <button onclick="closeReceiptModal()" class="text-slate-400"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto bg-slate-100 flex justify-center">
+                <!-- Printable Receipt -->
+                <div id="printable-receipt" class="print-area bg-white p-4 w-full text-[11px] font-mono text-slate-800 shadow-sm rounded-lg space-y-3">
+                    <div class="text-center border-b border-dashed pb-2">
+                        <h2 id="rec-store-name" class="font-bold text-xs">NAMA TOKO</h2>
+                        <p id="rec-store-address" class="text-[9px] text-slate-500">Jl. Utama No. 123</p>
+                    </div>
+                    <div id="rec-items-list" class="border-b border-dashed pb-2 space-y-1"></div>
+                    <div class="border-b border-dashed pb-2 text-[10px]">
+                        <div class="flex justify-between font-bold"><span>TOTAL:</span><span id="rec-total">Rp 0</span></div>
+                    </div>
+                    <!-- Google Review QR on Receipt -->
+                    <div class="text-center pt-1 space-y-1">
+                        <p class="font-bold text-[9px]">Beri Review Google Toko Kami:</p>
+                        <div id="rec-google-qr" class="flex justify-center p-1 border rounded w-fit mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 bg-slate-50 border-t flex justify-between no-print">
+                <button onclick="closeReceiptModal()" class="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl">Tutup</button>
+                <button onclick="window.print()" class="px-4 py-1.5 bg-sky-600 text-white text-xs font-bold rounded-xl shadow"><i class="fa-solid fa-print"></i> Cetak</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL STORE SETTINGS -->
+    <div id="modal-settings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white max-w-sm w-full rounded-2xl shadow-2xl p-5 space-y-3">
+            <h3 class="font-bold text-slate-800 text-sm">Pengaturan Toko</h3>
+            <div>
+                <label class="block text-xs text-slate-700 font-semibold mb-1">Nama Toko</label>
+                <input type="text" id="cfg-store-name" class="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-700 font-semibold mb-1">Alamat Toko</label>
+                <input type="text" id="cfg-store-address" class="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-700 font-semibold mb-1">URL Google Review Toko</label>
+                <input type="url" id="cfg-google-url" class="w-full px-3 py-1.5 border rounded-xl text-xs outline-none">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeSettingsModal()" class="px-3 py-1.5 text-xs text-slate-500">Batal</button>
+                <button onclick="saveSettings()" class="px-4 py-1.5 bg-sky-600 text-white text-xs font-bold rounded-xl shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 no-print">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">Notifikasi</span>
+    </div>
+
+    <script>
+        // Local Storage Keys
+        const STORAGE_HISTORY = 'QRS_HISTORY';
+        const STORAGE_SETTINGS = 'QRS_SETTINGS';
+
+        // State Data
+        let historyData = [];
+        let settings = {
+            storeName: 'Kopi Toko Utama',
+            storeAddress: 'Jl. Merdeka No. 88, Bandung',
+            googleReviewUrl: 'https://g.page/r/example-review'
+        };
+
+        let currentGenType = 'url';
+        let html5QrcodeScanner = null;
+        let lastScannedText = '';
+
+        // POS Data
+        const sampleProducts = [
+            { id: '1', name: 'Kopi Susu Gula Aren', price: 18000, icon: '☕' },
+            { id: '2', name: 'Americano Ice', price: 15000, icon: '🧊' },
+            { id: '3', name: 'Roti Bakar Keju', price: 20000, icon: '🍞' },
+            { id: '4', name: 'Croissant Butter', price: 22000, icon: '🥐' },
+        ];
+        let posCart = [];
+
+        window.onload = function() {
+            loadStoredData();
+            startClock();
+            generateBatchQR();
+            renderCustomQR();
+            renderPosCatalog();
+            renderHistoryTable();
+        };
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('clock-time').innerText = now.toLocaleTimeString('id-ID');
+                document.getElementById('clock-date').innerText = now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+            }, 1000);
+        }
+
+        function loadStoredData() {
+            const h = localStorage.getItem(STORAGE_HISTORY);
+            if (h) historyData = JSON.parse(h);
+
+            const s = localStorage.getItem(STORAGE_SETTINGS);
+            if (s) settings = JSON.parse(s);
+
+            document.getElementById('act-google-url').value = settings.googleReviewUrl;
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_HISTORY, JSON.stringify(historyData));
+            localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings));
+        }
+
+        function addHistoryLog(type, content) {
+            historyData.unshift({
+                time: new Date().toLocaleString('id-ID'),
+                type: type,
+                content: content
+            });
+            saveData();
+            renderHistoryTable();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-slate-800', 'text-sky-400'));
+
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-${tabId}`).classList.add('bg-slate-800', 'text-sky-400');
+
+            const titles = {
+                batch: 'QRSprint Batch Print Generator',
+                generator: 'Custom QR Code Generator',
+                scanner: 'Fast QR Camera & File Scanner',
+                activator: 'Google Review QR Activator',
+                pos: 'Kasir POS Toko',
+                history: 'Riwayat & Log Pemindaian'
+            };
+            document.getElementById('page-title').innerText = titles[tabId];
+
+            if (tabId !== 'scanner') stopCameraScanner();
+        }
+
+        // ==========================================
+        // 1. QRSprint Batch Generator
+        // ==========================================
+        function generateBatchQR() {
+            const prefix = document.getElementById('batch-prefix').value.trim();
+            const start = parseInt(document.getElementById('batch-start').value) || 1;
+            const end = parseInt(document.getElementById('batch-end').value) || 10;
+            const baseUrl = document.getElementById('batch-base-url').value.trim();
+
+            const grid = document.getElementById('batch-qr-grid');
+            grid.innerHTML = '';
+
+            const total = Math.max(1, end - start + 1);
+            document.getElementById('batch-count-label').innerText = `${total} QR Dihasilkan`;
+
+            for (let i = start; i <= end; i++) {
+                const codeText = `${prefix}${String(i).padStart(3, '0')}`;
+                const finalPayload = baseUrl ? `${baseUrl}${codeText}` : codeText;
+
+                const card = document.createElement('div');
+                card.className = 'p-3 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center text-center space-y-1 shadow-sm';
+                
+                const qrContainer = document.createElement('div');
+                qrContainer.className = 'p-1 bg-white border rounded-lg';
+                card.appendChild(qrContainer);
+
+                const label = document.createElement('span');
+                label.className = 'text-[11px] font-bold text-slate-800';
+                label.innerText = codeText;
+                card.appendChild(label);
+
+                grid.appendChild(card);
+
+                new QRCode(qrContainer, {
+                    text: finalPayload,
+                    width: 90,
+                    height: 90
+                });
+            }
+        }
+
+        // ==========================================
+        // 2. Custom QR Generator
+        // ==========================================
+        function setGenType(type) {
+            currentGenType = type;
+            document.querySelectorAll('.gen-type-btn').forEach(btn => {
+                btn.className = 'gen-type-btn px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600';
+            });
+            document.getElementById(`gt-${type}`).className = 'gen-type-btn px-3 py-1.5 rounded-xl border text-xs font-semibold bg-sky-50 border-sky-600 text-sky-700';
+
+            const container = document.getElementById('gen-fields-container');
+            if (type === 'url') {
+                container.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">URL Target</label>
+                        <input type="url" id="gen-input-url" oninput="renderCustomQR()" value="https://google.com" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                    </div>`;
+            } else if (type === 'text') {
+                container.innerHTML = `
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Teks Pesan</label>
+                        <textarea id="gen-input-text" oninput="renderCustomQR()" rows="3" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">Halo, selamat datang!</textarea>
+                    </div>`;
+            } else if (type === 'wifi') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Wi-Fi (SSID)</label>
+                            <input type="text" id="gen-wifi-ssid" oninput="renderCustomQR()" value="MyKopi_WiFi" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Password Wi-Fi</label>
+                            <input type="text" id="gen-wifi-pass" oninput="renderCustomQR()" value="kopi12345" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                    </div>`;
+            } else if (type === 'wa') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor WA (62xxx)</label>
+                            <input type="text" id="gen-wa-num" oninput="renderCustomQR()" value="628123456789" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Pesan Awal</label>
+                            <input type="text" id="gen-wa-msg" oninput="renderCustomQR()" value="Halo Admin" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                    </div>`;
+            } else if (type === 'vcard') {
+                container.innerHTML = `
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap</label>
+                            <input type="text" id="gen-vc-name" oninput="renderCustomQR()" value="Budi Toko" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">No Telepon</label>
+                            <input type="text" id="gen-vc-tel" oninput="renderCustomQR()" value="08123456789" class="w-full px-3.5 py-2 border rounded-xl text-xs outline-none">
+                        </div>
+                    </div>`;
+            }
+            renderCustomQR();
+        }
+
+        function getCustomPayload() {
+            if (currentGenType === 'url') return document.getElementById('gen-input-url')?.value || 'https://google.com';
+            if (currentGenType === 'text') return document.getElementById('gen-input-text')?.value || 'Teks';
+            if (currentGenType === 'wifi') {
+                const s = document.getElementById('gen-wifi-ssid')?.value || '';
+                const p = document.getElementById('gen-wifi-pass')?.value || '';
+                return `WIFI:S:${s};T:WPA;P:${p};;`;
+            }
+            if (currentGenType === 'wa') {
+                const n = document.getElementById('gen-wa-num')?.value || '';
+                const m = encodeURIComponent(document.getElementById('gen-wa-msg')?.value || '');
+                return `https://wa.me/${n}?text=${m}`;
+            }
+            if (currentGenType === 'vcard') {
+                const name = document.getElementById('gen-vc-name')?.value || '';
+                const tel = document.getElementById('gen-vc-tel')?.value || '';
+                return `BEGIN:VCARD\nVERSION:3.0\nN:${name}\nTEL:${tel}\nEND:VCARD`;
+            }
+            return 'QRSprint';
+        }
+
+        function renderCustomQR() {
+            const preview = document.getElementById('custom-qr-preview');
+            preview.innerHTML = '';
+
+            const payload = getCustomPayload();
+            const fg = document.getElementById('gen-color-fg').value;
+            const bg = document.getElementById('gen-color-bg').value;
+            const size = parseInt(document.getElementById('gen-size').value) || 200;
+
+            new QRCode(preview, {
+                text: payload,
+                width: size,
+                height: size,
+                colorDark: fg,
+                colorLight: bg
+            });
+        }
+
+        function downloadCustomQR() {
+            const img = document.querySelector('#custom-qr-preview img');
+            if (img) {
+                const a = document.createElement('a');
+                a.href = img.src;
+                a.download = `QR_Custom_${Date.now()}.png`;
+                a.click();
+                addHistoryLog('Download QR Custom', getCustomPayload());
+            }
+        }
+
+        // ==========================================
+        // 3. Fast Camera & File Scanner
+        // ==========================================
+        function startCameraScanner() {
+            if (html5QrcodeScanner) stopCameraScanner();
+
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    handleScanSuccess(decodedText);
+                    stopCameraScanner();
+                },
+                (errorMessage) => {}
+            ).catch(err => showToast("Gagal mengakses kamera!", "error"));
+        }
+
+        function stopCameraScanner() {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    html5QrcodeScanner.clear();
+                    html5QrcodeScanner = null;
+                }).catch(() => {});
+            }
+        }
+
+        function scanImageFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const scanner = new Html5Qrcode("reader");
+            scanner.scanFile(file, true)
+                .then(decodedText => handleScanSuccess(decodedText))
+                .catch(err => showToast("QR Code tidak terdeteksi pada gambar!", "error"));
+        }
+
+        function handleScanSuccess(text) {
+            lastScannedText = text;
+            const box = document.getElementById('scan-result-box');
+            box.innerHTML = `<p class="font-bold text-slate-800 break-all text-center">${text}</p>`;
+
+            document.getElementById('btn-copy-scan').disabled = false;
+
+            const btnOpen = document.getElementById('btn-open-scan');
+            if (text.startsWith('http://') || text.startsWith('https://')) {
+                btnOpen.href = text;
+                btnOpen.classList.remove('hidden');
+            } else {
+                btnOpen.classList.add('hidden');
+            }
+
+            // Fill Activator input if applicable
+            document.getElementById('act-qr-id').value = text;
+
+            addHistoryLog('Scan QR', text);
+            showToast("QR Code Berhasil Dipindai!");
+        }
+
+        function copyScanResult() {
+            if (lastScannedText) {
+                document.execCommand('copy');
+                navigator.clipboard?.writeText(lastScannedText);
+                showToast("Hasil dipindai disalin ke clipboard!");
+            }
+        }
+
+        // ==========================================
+        // 4. Google Review QR Activator
+        // ==========================================
+        function activateReviewQR() {
+            const googleUrl = document.getElementById('act-google-url').value.trim();
+            const qrId = document.getElementById('act-qr-id').value.trim();
+
+            if (!googleUrl || !qrId) {
+                showToast("Isi URL Google Review dan Kode ID QR!", "error");
+                return;
+            }
+
+            settings.googleReviewUrl = googleUrl;
+            saveData();
+
+            const previewBox = document.getElementById('activator-preview-box');
+            const qrRes = document.getElementById('act-qr-result');
+            qrRes.innerHTML = '';
+
+            new QRCode(qrRes, {
+                text: googleUrl,
+                width: 130,
+                height: 130
+            });
+
+            previewBox.classList.remove('hidden');
+            addHistoryLog('Aktivasi Review QR', `${qrId} -> ${googleUrl}`);
+            showToast(`QR ${qrId} berhasil diaktifkan!`);
+        }
+
+        // ==========================================
+        // 5. Mini POS Module
+        // ==========================================
+        function renderPosCatalog() {
+            const query = document.getElementById('pos-search').value.toLowerCase();
+            const grid = document.getElementById('pos-catalog-grid');
+            
+            const filtered = sampleProducts.filter(p => p.name.toLowerCase().includes(query));
+            grid.innerHTML = filtered.map(p => `
+                <div onclick="addPosCart('${p.id}')" class="bg-white p-3 rounded-xl border border-slate-200 hover:border-sky-500 transition cursor-pointer text-center">
+                    <span class="text-2xl">${p.icon}</span>
+                    <h5 class="text-xs font-bold text-slate-800 mt-1">${p.name}</h5>
+                    <p class="text-[10px] text-sky-600 font-bold">${formatRupiah(p.price)}</p>
+                </div>
+            `).join('');
+        }
+
+        function addPosCart(id) {
+            const prod = sampleProducts.find(p => p.id === id);
+            const exist = posCart.find(i => i.id === id);
+
+            if (exist) {
+                exist.qty++;
+            } else {
+                posCart.push({ ...prod, qty: 1 });
+            }
+            updatePosCartUI();
+        }
+
+        function updatePosCartUI() {
+            const container = document.getElementById('pos-cart-container');
+            const subtotal = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+
+            if (posCart.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">Keranjang kosong</p>`;
+                document.getElementById('btn-pos-checkout').disabled = true;
+            } else {
+                document.getElementById('btn-pos-checkout').disabled = false;
+                container.innerHTML = posCart.map(item => `
+                    <div class="flex items-center justify-between bg-slate-50 p-2 rounded-lg text-xs">
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <span class="text-[10px] text-slate-500">${formatRupiah(item.price)} x${item.qty}</span>
+                        </div>
+                        <span class="font-bold text-slate-800">${formatRupiah(item.price * item.qty)}</span>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('pos-subtotal').innerText = formatRupiah(subtotal);
+            document.getElementById('pos-total').innerText = formatRupiah(subtotal);
+        }
+
+        function clearPosCart() {
+            posCart = [];
+            updatePosCartUI();
+        }
+
+        function openPosCheckoutModal() {
+            const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+            document.getElementById('pos-pay-total').innerText = formatRupiah(total);
+            document.getElementById('pos-cash-input').value = total;
+            calcPosChange();
+            document.getElementById('modal-pos-checkout').classList.remove('hidden');
+        }
+
+        function closePosCheckoutModal() {
+            document.getElementById('modal-pos-checkout').classList.add('hidden');
+        }
+
+        function calcPosChange() {
+            const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const cash = parseInt(document.getElementById('pos-cash-input').value) || 0;
+            const change = cash - total;
+            document.getElementById('pos-change-display').innerText = formatRupiah(Math.max(0, change));
+        }
+
+        function submitPosTransaction() {
+            const total = posCart.reduce((s, i) => s + (i.price * i.qty), 0);
+            closePosCheckoutModal();
+
+            // Print Receipt Modal
+            document.getElementById('rec-store-name').innerText = settings.storeName;
+            document.getElementById('rec-store-address').innerText = settings.storeAddress;
+            document.getElementById('rec-items-list').innerHTML = posCart.map(i => `
+                <div class="flex justify-between">
+                    <span>${i.name} x${i.qty}</span>
+                    <span>${formatRupiah(i.price * i.qty)}</span>
+                </div>
+            `).join('');
+            document.getElementById('rec-total').innerText = formatRupiah(total);
+
+            // Render Google Review QR Code on Receipt
+            const qrBox = document.getElementById('rec-google-qr');
+            qrBox.innerHTML = '';
+            new QRCode(qrBox, {
+                text: settings.googleReviewUrl || 'https://google.com',
+                width: 80,
+                height: 80
+            });
+
+            document.getElementById('modal-receipt').classList.remove('hidden');
+            addHistoryLog('Transaksi POS Kasir', `Total: ${formatRupiah(total)}`);
+            posCart = [];
+            updatePosCartUI();
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('modal-receipt').classList.add('hidden');
+        }
+
+        // ==========================================
+        // 6. Settings & History Log
+        // ==========================================
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = historyData.map(h => `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="py-2.5 px-4 text-slate-500">${h.time}</td>
+                    <td class="py-2.5 px-4 font-semibold text-slate-800">${h.type}</td>
+                    <td class="py-2.5 px-4 text-slate-600 break-all">${h.content}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportHistoryCSV() {
+            if (historyData.length === 0) return;
+            let csv = "Waktu,Tipe,Konten\n";
+            historyData.forEach(h => { csv += `"${h.time}","${h.type}","${h.content}"\n`; });
+            const link = document.createElement('a');
+            link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+            link.download = `History_QRSprint_${Date.now()}.csv`;
+            link.click();
+        }
+
+        function clearHistory() {
+            if (confirm("Hapus seluruh riwayat log?")) {
+                historyData = [];
+                saveData();
+                renderHistoryTable();
+            }
+        }
+
+        function openSettingsModal() {
+            document.getElementById('cfg-store-name').value = settings.storeName;
+            document.getElementById('cfg-store-address').value = settings.storeAddress;
+            document.getElementById('cfg-google-url').value = settings.googleReviewUrl;
+            document.getElementById('modal-settings').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('modal-settings').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            settings.storeName = document.getElementById('cfg-store-name').value.trim();
+            settings.storeAddress = document.getElementById('cfg-store-address').value.trim();
+            settings.googleReviewUrl = document.getElementById('cfg-google-url').value.trim();
+            saveData();
+            closeSettingsModal();
+            showToast("Pengaturan berhasil disimpan!");
+        }
+
+        // Helpers
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').className = type === 'error' ? "fa-solid fa-circle-xmark text-rose-400" : "fa-solid fa-circle-check text-emerald-400";
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+    </script>
+</body>
+</html>
